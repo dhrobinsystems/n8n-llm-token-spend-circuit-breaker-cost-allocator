@@ -1,0 +1,466 @@
+{
+  "_meta": {
+    "synthetic": true,
+    "description": "Fully synthetic LLM gateway fixture: fictitious clients, workflows, campaigns and cost centers; example.com addresses; 555-01xx phone number. No real accounts, usage or financial data.",
+    "asOf": "2026-11-17T14:00:00.000Z",
+    "scenarios": {
+      "req-001": "Low spend: cheap model, LLM OK",
+      "req-002": "Low spend: Anthropic prompt-cache read billed at the cache-hit rate",
+      "req-003": "Client soft cap (client_alpha passes 80%): Sonnet downgraded to Haiku, output clamped",
+      "req-004": "Client hard cap (client_beta): projected overrun trips the client scope -> template reply",
+      "req-005": "OpenAI 429 rate limit -> regex classification fallback",
+      "req-006": "Timeout -> regex extraction fallback; charged at the pre-flight estimate",
+      "req-007": "Shared cost center -> exact 60/40 split to cc-marketing / cc-sales; OpenAI cached tokens",
+      "req-008": "Success without a usage block -> charged at the pre-flight estimate",
+      "req-009": "Email and phone redacted before the provider call",
+      "req-010": "Unpriced model -> blocked (fail closed), regex fallback",
+      "req-011": "Input over MAX_INPUT_CHARS -> extractive summary, never sent",
+      "req-012": "Missing attribution -> REJECTED",
+      "req-013": "Unsupported task -> REJECTED",
+      "req-014": "Global soft cap crossed (approaching threshold): GPT-6 Astra downgraded to Luna",
+      "req-015": "Critical priority bypasses the soft cap (still bounded by hard caps)",
+      "req-016": "OpenAI insufficient_quota -> fallback; OpenAI breaker open until the next budget day",
+      "req-017": "Anthropic 529 overloaded (failure 1 of 3) -> extractive summary",
+      "req-018": "Anthropic 429 rate limit (failure 2 of 3) -> regex classification",
+      "req-019": "Anthropic timeout (failure 3 of 3) -> regex extraction; Anthropic breaker opens for the cooldown",
+      "req-020": "Global hard cap trip: worst-case estimate exceeds the cap minus safety margin -> extractive summary",
+      "req-021": "After the trip: even a tiny request uses fallback rules (HARD_CAP_TRIPPED)"
+    }
+  },
+  "sandboxBudgets": {
+    "global": {
+      "hardUsd": "1.00",
+      "softPct": 80
+    },
+    "scopes": {
+      "clients": {
+        "client_alpha": {
+          "hardUsd": "0.40",
+          "softPct": 80
+        },
+        "client_beta": {
+          "hardUsd": "0.15",
+          "softPct": 80
+        }
+      },
+      "campaigns": {
+        "camp_q4_launch": {
+          "hardUsd": "0.30",
+          "softPct": 90
+        }
+      },
+      "costCenters": {
+        "cc-marketing": {
+          "hardUsd": "0.60",
+          "softPct": 80
+        },
+        "cc-sales": {
+          "hardUsd": "0.60",
+          "softPct": 80
+        }
+      }
+    }
+  },
+  "ledgerSeed": {
+    "version": 1,
+    "day": "2026-11-17",
+    "spentNanos": {
+      "global": 770000000,
+      "clients": {
+        "client_alpha": 318000000,
+        "client_beta": 148000000,
+        "client_gamma": 220000000,
+        "client_delta": 84000000
+      },
+      "workflows": {
+        "wf_ticket_triage": 310000000,
+        "wf_lead_scoring": 260000000,
+        "wf_reply_drafts": 200000000
+      },
+      "campaigns": {
+        "none": 650000000,
+        "camp_q4_launch": 120000000
+      },
+      "costCenters": {
+        "cc-support": 350000000,
+        "cc-sales": 260000000,
+        "cc-marketing": 160000000
+      },
+      "providers": {
+        "openai": 450000000,
+        "anthropic": 320000000
+      },
+      "models": {
+        "gpt-5-mini": 210000000,
+        "gpt-5.4-mini": 220000000,
+        "claude-sonnet-5-5": 190000000,
+        "claude-haiku-5-5": 150000000
+      }
+    },
+    "counts": {
+      "requests": 412,
+      "llmCalls": 396,
+      "downgrades": 9,
+      "fallbacks": 14,
+      "rejected": 2,
+      "providerFailures": 4
+    },
+    "tokens": {
+      "input": 1850000,
+      "cachedInput": 420000,
+      "cacheWrite": 30000,
+      "output": 310000
+    },
+    "trips": {},
+    "breakers": {
+      "openai": {
+        "state": "CLOSED",
+        "consecutiveFailures": 0,
+        "openedAt": null,
+        "reopenAt": null,
+        "reason": null
+      },
+      "anthropic": {
+        "state": "CLOSED",
+        "consecutiveFailures": 0,
+        "openedAt": null,
+        "reopenAt": null,
+        "reason": null
+      }
+    },
+    "alertsSent": {},
+    "history": [
+      {
+        "day": "2026-11-16",
+        "spentNanos": 940000000,
+        "requests": 530,
+        "llmCalls": 512,
+        "fallbacks": 18
+      }
+    ],
+    "updatedAt": "2026-11-17T13:55:00.000Z"
+  },
+  "requests": [
+    {
+      "request_id": "req-001",
+      "task": "classify",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input": "Hello, I was charged twice on my last invoice, can you refund one of them?",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support",
+      "max_output_tokens": 16,
+      "simulate": {
+        "outcome": "success",
+        "text": "billing",
+        "usage": {
+          "prompt_tokens": 182,
+          "completion_tokens": 3
+        }
+      },
+      "labels": [
+        "billing",
+        "technical_support",
+        "sales_inquiry",
+        "cancellation",
+        "general"
+      ]
+    },
+    {
+      "request_id": "req-002",
+      "task": "summarize",
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "input": "Weekly support digest. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. ",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_reply_drafts",
+      "cost_center": "cc-support",
+      "max_output_tokens": 200,
+      "simulate": {
+        "outcome": "success",
+        "text": "Ticket volume rose after onboarding; exports dominated. The rota absorbed the peak.",
+        "usage": {
+          "input_tokens": 410,
+          "cache_read_input_tokens": 1800,
+          "cache_creation_input_tokens": 0,
+          "output_tokens": 96
+        }
+      }
+    },
+    {
+      "request_id": "req-003",
+      "task": "score",
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "input": "We are a team of 40 evaluating vendors this quarter and would like pricing and a demo.",
+      "client_key": "client_alpha",
+      "workflow_id": "wf_lead_scoring",
+      "cost_center": "cc-sales",
+      "campaign_id": "camp_q4_launch",
+      "max_output_tokens": 512,
+      "simulate": {
+        "outcome": "success",
+        "text": "72",
+        "usage": {
+          "input_tokens": 260,
+          "output_tokens": 4
+        }
+      }
+    },
+    {
+      "request_id": "req-004",
+      "task": "reply",
+      "provider": "openai",
+      "model": "gpt-5.5",
+      "input": "My dashboard export keeps failing with an error since this morning.",
+      "client_key": "client_beta",
+      "workflow_id": "wf_reply_drafts",
+      "cost_center": "cc-support",
+      "max_output_tokens": 2048,
+      "template_vars": {
+        "product": "Example Analytics"
+      }
+    },
+    {
+      "request_id": "req-005",
+      "task": "classify",
+      "provider": "openai",
+      "model": "gpt-5-mini",
+      "input": "The app crashes every time I open the reports page.",
+      "client_key": "client_delta",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support",
+      "max_output_tokens": 16,
+      "simulate": {
+        "outcome": "rate_limited"
+      }
+    },
+    {
+      "request_id": "req-006",
+      "task": "extract",
+      "provider": "openai",
+      "model": "gpt-6.1-terra",
+      "input": "Renewal for order ORD-48213 is due 2026-12-01 for USD 4,200.00; credit memo CM-9912 of $350.00 applied.",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support",
+      "max_output_tokens": 256,
+      "simulate": {
+        "outcome": "timeout"
+      }
+    },
+    {
+      "request_id": "req-007",
+      "task": "reply",
+      "provider": "openai",
+      "model": "gpt-5.4-mini",
+      "input": "Can you share pricing for 25 seats on the annual plan?",
+      "client_key": "client_delta",
+      "workflow_id": "wf_reply_drafts",
+      "cost_center": "shared",
+      "campaign_id": "camp_q4_launch",
+      "max_output_tokens": 300,
+      "simulate": {
+        "outcome": "success",
+        "text": "Thanks for asking! A specialist will send annual pricing for 25 seats shortly.",
+        "usage": {
+          "prompt_tokens": 640,
+          "completion_tokens": 120,
+          "cached_tokens": 512
+        }
+      }
+    },
+    {
+      "request_id": "req-008",
+      "task": "classify",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input": "I would like to upgrade my plan to add more seats.",
+      "client_key": "client_delta",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-sales",
+      "max_output_tokens": 16,
+      "simulate": {
+        "outcome": "missing_usage",
+        "text": "sales_inquiry"
+      }
+    },
+    {
+      "request_id": "req-009",
+      "task": "reply",
+      "provider": "openai",
+      "model": "gpt-5-mini",
+      "input": "Hi, please send the corrected invoice to jane.doe@example.com or call (555) 010-0199 before Friday.",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_reply_drafts",
+      "cost_center": "cc-support",
+      "max_output_tokens": 200,
+      "simulate": {
+        "outcome": "success",
+        "text": "Thanks, we will send the corrected invoice to the address on file.",
+        "usage": {
+          "prompt_tokens": 95,
+          "completion_tokens": 22
+        }
+      }
+    },
+    {
+      "request_id": "req-010",
+      "task": "classify",
+      "provider": "openai",
+      "model": "mock-llm-x1",
+      "input": "Where can I download my receipt?",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support",
+      "max_output_tokens": 16
+    },
+    {
+      "request_id": "req-011",
+      "task": "summarize",
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "input": "Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests co",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_reply_drafts",
+      "cost_center": "cc-support",
+      "max_output_tokens": 200
+    },
+    {
+      "request_id": "req-012",
+      "task": "classify",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input": "Unattributed request without client or workflow keys."
+    },
+    {
+      "request_id": "req-013",
+      "task": "translate",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input": "Bonjour, je voudrais annuler.",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support"
+    },
+    {
+      "request_id": "req-014",
+      "task": "extract",
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "input": "Purchase order PO-77310 dated 2026-11-12 totals USD 12,500.00; deposit of $2,500.00 received.",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_lead_scoring",
+      "cost_center": "cc-sales",
+      "campaign_id": "camp_q4_launch",
+      "max_output_tokens": 1024,
+      "simulate": {
+        "outcome": "success",
+        "text": "{\"amounts\":[\"USD 12,500.00\",\"$2,500.00\"],\"dates\":[\"2026-11-12\"],\"references\":[\"PO-77310\"]}",
+        "usage": {
+          "prompt_tokens": 70,
+          "completion_tokens": 48
+        }
+      }
+    },
+    {
+      "request_id": "req-015",
+      "task": "reply",
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "input": "Our production workspace is down and the executive review starts in one hour.",
+      "client_key": "client_alpha",
+      "workflow_id": "wf_reply_drafts",
+      "cost_center": "cc-support",
+      "max_output_tokens": 1024,
+      "simulate": {
+        "outcome": "success",
+        "text": "We are on it. An engineer is joining your incident bridge now.",
+        "usage": {
+          "input_tokens": 120,
+          "output_tokens": 40
+        }
+      },
+      "priority": "critical"
+    },
+    {
+      "request_id": "req-016",
+      "task": "classify",
+      "provider": "openai",
+      "model": "gpt-5-mini",
+      "input": "Please cancel my subscription at the end of the term.",
+      "client_key": "client_delta",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support",
+      "max_output_tokens": 16,
+      "simulate": {
+        "outcome": "quota_exceeded"
+      }
+    },
+    {
+      "request_id": "req-017",
+      "task": "summarize",
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "input": "Call notes: Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. ",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_reply_drafts",
+      "cost_center": "cc-support",
+      "max_output_tokens": 300,
+      "simulate": {
+        "outcome": "overloaded"
+      }
+    },
+    {
+      "request_id": "req-018",
+      "task": "classify",
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "input": "Our invoice shows the wrong billing address.",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support",
+      "max_output_tokens": 16,
+      "simulate": {
+        "outcome": "rate_limited"
+      }
+    },
+    {
+      "request_id": "req-019",
+      "task": "extract",
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "input": "Ticket SUP-20311 opened 2026-11-17 about a $49.00 duplicate charge.",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support",
+      "max_output_tokens": 128,
+      "simulate": {
+        "outcome": "timeout"
+      }
+    },
+    {
+      "request_id": "req-020",
+      "task": "summarize",
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "input": "Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support rota absorbed the peak without overtime. Quarterly operations note for the synthetic Example Analytics workspace. Ticket volume rose after the onboarding change and most requests concerned dashboard exports. The support r",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_reply_drafts",
+      "cost_center": "cc-support",
+      "max_output_tokens": 2048
+    },
+    {
+      "request_id": "req-021",
+      "task": "classify",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input": "Is there a student discount on the starter plan?",
+      "client_key": "client_gamma",
+      "workflow_id": "wf_ticket_triage",
+      "cost_center": "cc-support",
+      "max_output_tokens": 16
+    }
+  ]
+}
