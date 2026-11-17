@@ -56,6 +56,8 @@ Cost overruns in LLM automations rarely come from one big request. They come fro
 
 ## Architecture
 
+![n8n LLM Token Spend Circuit Breaker & Cost Allocator Workflow](https://raw.githubusercontent.com/dhrobinsystems/n8n-llm-token-spend-circuit-breaker-cost-allocator/main/workflow-overview.png)
+
 ```mermaid
 flowchart TD
     T1[Manual Test Trigger<br/>synthetic fixture] --> CFG
