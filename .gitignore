@@ -1,0 +1,44 @@
+# --- Secrets & local environment ---------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+credentials*.json
+secrets/
+
+# --- Simulator & local output ------------------------------------------------
+sim-output/
+snapshots-local/
+*.snapshot.tmp
+
+# --- n8n local data ----------------------------------------------------------
+.n8n/
+n8n-data/
+database.sqlite
+*.sqlite-journal
+
+# --- Node / tooling caches ---------------------------------------------------
+node_modules/
+.npm/
+.cache/
+.eslintcache
+coverage/
+*.log
+npm-debug.log*
+
+# --- OS / editor -------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Gateway exports / previews (may contain prompts, outputs or spend data) --
+*.csv
+ledger-exports/
+payload-previews/
+prompt-logs/
